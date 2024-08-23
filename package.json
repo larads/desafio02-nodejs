@@ -4,15 +4,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "knex": "node --no-warnings --loader tsx ./node_modules/knex/bin/cli.js",
     "dev": "tsx watch src/server.ts"
   },
   "keywords": [],
   "author": "larads",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
     "@types/node": "^22.5.0",
-    "fastify": "^4.28.1",
+    "knex": "^3.1.0",
     "tsx": "^4.17.0",
     "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "fastify": "^4.28.1",
+    "sqlite3": "^5.1.6",
+    "ts-node": "^10.9.2"
   }
 }
