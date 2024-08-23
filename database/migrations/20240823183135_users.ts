@@ -5,9 +5,9 @@ export async function up(knex: Knex): Promise<void> {
         table.uuid('id').primary()
         table.text('name').notNullable()
         table.text('email').notNullable()
-        table.text('adress').notNullable()
+        table.text('address').notNullable()
         table.decimal('weight', 5, 2).notNullable()
-        table.decimal('height', 3, 0).notNullable()
+        table.integer('height').notNullable()
     })
 }
 
