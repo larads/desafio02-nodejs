@@ -1,10 +1,12 @@
 import { z } from 'zod'
-import crypto from 'node:crypto'
 import { knex } from '../database'
+import cookie from '@fastify/cookie'
 import { FastifyInstance } from 'fastify'
+import crypto, { randomUUID } from 'node:crypto'
 
 export async function usersRoutes(app: FastifyInstance) {
     app.post('/', async (request, response) => {
+
         const createUserBodySchema = z.object({
             name: z.string(),
             email: z.string(),
@@ -17,10 +19,24 @@ export async function usersRoutes(app: FastifyInstance) {
             request.body,
         )
 
-        const checkUserExist = await knex.select('*').from('users').where({ email })
-
-        if (checkUserExist.length > 0) {
+        const checkUserExist = await knex
+            .select('*')
+            .from('users')
+            .where('email', email)
+            .first()
+        if (checkUserExist) {
             throw new Error('Este email já está vinculado à um usuário')
+        }
+
+        let sessionId = request.cookies.sessionId
+
+        if (!sessionId) {
+            sessionId = randomUUID()
+
+            response.cookie('sessionId', sessionId, {
+                path: '/meals',
+                maxAge: 1000 * 60 * 60 * 24 * 7,
+            })
         }
 
         await knex('users').insert({
@@ -30,6 +46,7 @@ export async function usersRoutes(app: FastifyInstance) {
             address,
             weight,
             height,
+            session_id: sessionId,
         })
 
         return response.status(201).send()
