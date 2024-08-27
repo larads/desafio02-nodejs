@@ -25,7 +25,9 @@ export async function usersRoutes(app: FastifyInstance) {
             .where('email', email)
             .first()
         if (checkUserExist) {
-            throw new Error('Este email já está vinculado à um usuário')
+            return response.status(400).send({
+                error: 'Este email já está vinculado à um usuário',
+            })
         }
 
         let sessionId = request.cookies.sessionId
