@@ -84,19 +84,30 @@ export async function mealsRoutes(app: FastifyInstance) {
         },
     )
 
-    app.get('/summary', async () => {
+    app.get('/summary', async (request) => {
+        const { sessionId } = request.cookies
 
-        const [count] = await knex('meals').count('id', {
-            as: 'Total de refeições registradas',
-        })
+        const [user] = await knex('users')
+            .where('session_id', sessionId)
+            .select('id')
+
+        const userId = user.id
+
+        const [count] = await knex('meals')
+            .count('id', {
+                as: 'Total de refeições registradas',
+            })
+            .where('user_id', userId)
 
         const refDieta = await knex('meals')
             .count('id', { as: 'Total de refeições dentro da dieta' })
             .where('isOnTheDiet', true)
+            .andWhere('user_id', userId)
 
         const refForaDieta = await knex('meals')
             .count('id', { as: 'Total de refeições fora da dieta' })
             .where('isOnTheDiet', false)
+            .andWhere('user_id', userId)
 
         const summary = {
             'Total de refeições registradas': parseInt(
