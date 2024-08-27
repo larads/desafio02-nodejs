@@ -1,61 +1,88 @@
 import { z } from 'zod'
 import crypto from 'node:crypto'
 import { knex } from '../database'
-import cookie from '@fastify/cookie'
 import { FastifyInstance } from 'fastify'
+import { checkSessionIdExists } from '../middleware/check-session-id-exists'
 
 export async function mealsRoutes(app: FastifyInstance) {
-    app.post('/', async (request, response) => {
-        const sessionId = request.cookies.sessionId
+    app.post(
+        '/',
+        { preHandler: [checkSessionIdExists] },
+        async (request, response) => {
+            const { sessionId } = request.cookies
 
-        if (!sessionId) {
-            return response.status(401).send({
-                error: 'Unauthorized',
+            const [user] = await knex('users')
+                .where('session_id', sessionId)
+                .select('id')
+
+            const userId = user.id
+
+            const createMealBodySchema = z.object({
+                name: z.string(),
+                description: z.string(),
+                isOnTheDiet: z.boolean(),
             })
-        }
+
+            const { name, description, isOnTheDiet } = createMealBodySchema.parse(
+                request.body,
+            )
+
+            await knex('meals').insert({
+                id: crypto.randomUUID(),
+                user_id: userId,
+                name,
+                description,
+                isOnTheDiet,
+            })
+            return response.status(201).send()
+        },
+    )
+
+    app.get('/', { preHandler: [checkSessionIdExists] }, async (request) => {
+        const { sessionId } = request.cookies
 
         const [user] = await knex('users')
             .where('session_id', sessionId)
             .select('id')
-
         const userId = user.id
 
-        const createMealBodySchema = z.object({
-            name: z.string(),
-            description: z.string(),
-            isOnTheDiet: z.boolean(),
-        })
-        const { name, description, isOnTheDiet } = createMealBodySchema.parse(
-            request.body,
-        )
-
-        await knex('meals').insert({
-            id: crypto.randomUUID(),
-            user_id: userId,
-            name,
-            description,
-            isOnTheDiet,
-        })
-        return response.status(201).send()
-    })
-
-    app.get('/', async () => {
-        const meals = await knex('meals').select()
+        const meals = await knex('meals').where('user_id', userId).select()
         return {
             meals,
         }
     })
 
-    app.get('/:id', async (request) => {
-        const getMealParamsSchema = z.object({
-            id: z.string().uuid(),
-        })
-        const params = getMealParamsSchema.parse(request.params)
+    app.get(
+        '/:id',
+        { preHandler: [checkSessionIdExists] },
+        async (request, response) => {
+            const getMealParamsSchema = z.object({
+                id: z.string().uuid(),
+            })
+            const params = getMealParamsSchema.parse(request.params)
 
-        const meal = await knex('meals').where('id', params.id).first()
+            const { sessionId } = request.cookies
 
-        return { meal }
-    })
+            const [user] = await knex('users')
+                .where('session_id', sessionId)
+                .select('id')
+
+            const userId = user.id
+
+            const meal = await knex('meals')
+                .where('id', params.id)
+                .andWhere('user_id', userId)
+                .first()
+
+            if (!meal) {
+                return response.status(401).send({
+                    error: 'Unauthorized',
+                })
+            }
+
+            return { meal }
+        },
+    )
 
     app.get('/summary', async () => {
 

@@ -7,7 +7,6 @@ declare module 'knex/types/tables' {
             description: string
             isOnTheDiet: boolean
             created_at: string
-            session_id?: string
         }
         users: {
             id: string
@@ -16,6 +15,7 @@ declare module 'knex/types/tables' {
             address: string
             weight: number
             height: number
+            session_id?: string
         }
     }
 }
